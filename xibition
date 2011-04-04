@@ -54,10 +54,12 @@ end
 #
 # Classes
 #
-SkipClassNames = [/^NS/, /^IK/, /^OSA/, /^QC/,
+SkipClassNames = [/^NS/, /^IK/, /^OSA/, /^QC/, /^UI/,
   'FirstResponder', 'IBLibraryObjectTemplate',
   'ABPeoplePickerView', 'ABPersonView',
+  'ADBannerView',
   'DRMSFFormatter', 'DiscRecordingPluginWidget',
+  'MKMapView',
   'PDFView', 'PDFThumbnailView',
   'QTCaptureView', 'QTMovieView',
   'WebView']
