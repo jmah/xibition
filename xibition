@@ -124,8 +124,12 @@ def describe_object(hier_def)
 
   iputs if $needs_line; $needs_line = false
   with_header desc, :indent => id_gutter, :prestrip => true do
-    if obj_def['frameOrigin']
+    if obj_def['ibShadowedToolTip']
       iputs if $needs_line; $needs_line = false
+      iputs "ToolTip: #{obj_def['ibShadowedToolTip']}"
+      $needs_line = true
+    end
+    if obj_def['frameOrigin']
       iputs "{#{obj_def['frameOrigin']}, #{obj_def['frameSize']}}"
       $needs_line = true
     end
