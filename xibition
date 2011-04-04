@@ -68,6 +68,7 @@ classdefs = plist['com.apple.ibtool.document.classes']
 known_class_keys = ['class', 'superclass', 'outlets', 'actions']
 classdefs.each_sorted_pair do |classkey, classdef|
   next if SkipClassNames.any? {|pat| pat === classdef['class'] }
+  next if classdef['superclass'].nil?
 
   with_header "@interface #{classdef['class']} : #{classdef['superclass']}", :indent => '' do
     (classdef['outlets'] || {}).each_sorted_pair do |name, outletclass|
