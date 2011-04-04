@@ -118,15 +118,14 @@ def describe_object(hier_def)
   obj_id = hier_def['object-id']
   obj_def = $object_id_map[obj_id]
 
-  id_gutter = "#{obj_id.to_s.rjust(4)}| "
-
-  desc = "----+ "
+  obj_id_str = obj_id.to_s.rjust(4)
+  desc = "#{"-" * obj_id_str.length}+ "
   custom_class = obj_def['custom-class']
   desc << "(#{custom_class} *) " if custom_class and custom_class != 'FirstResponder'
   desc << obj_def['label']
 
   iputs if $needs_line; $needs_line = false
-  with_header desc, :indent => id_gutter, :prestrip => true do
+  with_header desc, :indent => "#{obj_id_str}| ", :prestrip => true do
     iputs "Attributes: #{attributes_sha1(obj_def)}"
 
     if obj_def['ibShadowedToolTip']
