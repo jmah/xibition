@@ -144,7 +144,15 @@ def describe_object(hier_def)
       $needs_line = true
     end
     $connections_by_source_id[obj_id].each do |conn_def|
-      next unless conn_def['type'] == 'IBCocoaOutletConnection'
+      next unless conn_def['type'] == 'IBCocoaTouchEventConnection'
+      # Workaround: The event type has its key/value swapped in the ibtool output
+      event_type = conn_def['event-type'] || conn_def.index('event-type')
+      iputs if $needs_line; $needs_line = false
+      iputs "#{event_type}: -[(#{conn_def['source-label']}) #{conn_def['label']}]"
+      $needs_line = true
+    end
+    $connections_by_source_id[obj_id].each do |conn_def|
+      next unless %w[IBCocoaOutletConnection IBCocoaTouchOutletConnection].include? conn_def['type']
       iputs if $needs_line; $needs_line = false
       iputs "#{conn_def['label']} = #{conn_def['destination-label']}"
     end
