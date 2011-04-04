@@ -135,7 +135,7 @@ def describe_object(hier_def)
     if obj_def['frameOrigin']
       iputs "{#{obj_def['frameOrigin']}, #{obj_def['frameSize']}}"
     end
-    iputs; $needs_line = false
+    $needs_line = true
 
     $connections_by_source_id[obj_id].each do |conn_def|
       next unless conn_def['type'] == 'IBCocoaActionConnection'
@@ -160,7 +160,6 @@ def describe_object(hier_def)
       $needs_line = true
     end
 
-    iputs; $needs_line = false
     (hier_def['children'] || []).each {|child_hier_def| describe_object(child_hier_def) }
   end
   $needs_line = true
