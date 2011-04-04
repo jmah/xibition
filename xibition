@@ -67,7 +67,7 @@ known_class_keys = ['class', 'superclass', 'outlets', 'actions']
 classdefs.each_sorted_pair do |classkey, classdef|
   next if SkipClassNames.any? {|pat| pat === classdef['class'] }
 
-  with_header "@interface " + [classdef['class'], classdef['superclass']].compact.join(' : '), :indent => '' do
+  with_header "@interface #{classdef['class']} : #{classdef['superclass']}", :indent => '' do
     (classdef['outlets'] || {}).each_sorted_pair do |name, outletclass|
       iputs ['@property', 'IBOutlet', outletclass, (outletclass == 'id' ? '' : '*') + name].join(' ') + ';'
     end
