@@ -1,6 +1,8 @@
 #!/usr/bin/ruby
 
 require 'rubygems'
+require 'set'
+require 'digest/sha1'
 require 'escape'
 require 'plist'
 
@@ -110,6 +112,7 @@ end
 #
 # Print objects
 #
+AttributesTreatedSeparately = Set.new %w[object-id custom-class label ibShadowedToolTip frameOrigin frameSize children]
 $needs_line = false
 def describe_object(hier_def)
   obj_id = hier_def['object-id']
@@ -124,15 +127,15 @@ def describe_object(hier_def)
 
   iputs if $needs_line; $needs_line = false
   with_header desc, :indent => id_gutter, :prestrip => true do
+    iputs "Attributes: #{attributes_sha1(obj_def)}"
+
     if obj_def['ibShadowedToolTip']
-      iputs if $needs_line; $needs_line = false
       iputs "ToolTip: #{obj_def['ibShadowedToolTip']}"
-      $needs_line = true
     end
     if obj_def['frameOrigin']
       iputs "{#{obj_def['frameOrigin']}, #{obj_def['frameSize']}}"
-      $needs_line = true
     end
+    iputs; $needs_line = false
 
     $connections_by_source_id[obj_id].each do |conn_def|
       next unless conn_def['type'] == 'IBCocoaActionConnection'
@@ -161,6 +164,11 @@ def describe_object(hier_def)
     (hier_def['children'] || []).each {|child_hier_def| describe_object(child_hier_def) }
   end
   $needs_line = true
+end
+
+def attributes_sha1(obj_def)
+  attrs_for_hash = obj_def.select {|k,v| not AttributesTreatedSeparately.include? k }
+  Digest::SHA1.hexdigest attrs_for_hash.sort_by {|pair| pair[0] }.inspect
 end
 
 plist['com.apple.ibtool.document.hierarchy'].each {|hier_def| describe_object(hier_def) }
