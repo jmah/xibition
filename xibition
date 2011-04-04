@@ -52,6 +52,10 @@ class Hash
   end
 end
 
+def display_label(obj_def)
+  [obj_def['name'], obj_def['label']].compact.uniq.join(' - ')
+end
+
 
 #
 # Classes
@@ -113,7 +117,7 @@ end
 #
 # Print objects
 #
-AttributesTreatedSeparately = Set.new %w[object-id custom-class label ibShadowedToolTip frameOrigin frameSize children]
+AttributesTreatedSeparately = Set.new %w[object-id custom-class name label ibShadowedToolTip frameOrigin frameSize children]
 $needs_line = false
 def describe_object(hier_def)
   obj_id = hier_def['object-id']
@@ -123,7 +127,7 @@ def describe_object(hier_def)
   desc = "#{"-" * obj_id_str.length}+ "
   custom_class = obj_def['custom-class']
   desc << "(#{custom_class} *) " if custom_class and custom_class != 'FirstResponder'
-  desc << obj_def['label']
+  desc << display_label(obj_def)
 
   iputs if $needs_line; $needs_line = false
   with_header desc, :indent => "#{obj_id_str}| ", :prestrip => true do
@@ -152,7 +156,7 @@ def describe_object(hier_def)
       next unless conn_def['type'] == 'IBBindingConnection'
       dest_id = conn_def['destination-id']
       iputs if $needs_line; $needs_line = false
-      with_header "#{conn_def['binding']}: (#{dest_id}| #{$object_id_map[dest_id]['label']}).#{conn_def['keypath']}" do
+      with_header "#{conn_def['binding']}: (#{dest_id}| #{display_label($object_id_map[dest_id])}).#{conn_def['keypath']}" do
         conn_def['binding-options'].each_sorted_pair do |option, value|
           iputs [option, value].join(' = ')
         end
