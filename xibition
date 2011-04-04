@@ -143,7 +143,7 @@ def describe_object(hier_def)
       next unless conn_def['type'] == 'IBBindingConnection'
       dest_id = conn_def['destination-id']
       iputs if $needs_line; $needs_line = false
-      with_header "#{conn_def['binding']} ▶ (#{dest_id}| #{$object_id_map[dest_id]['label']}).#{conn_def['keypath']}" do
+      with_header "#{conn_def['binding']}: (#{dest_id}| #{$object_id_map[dest_id]['label']}).#{conn_def['keypath']}" do
         conn_def['binding-options'].each_sorted_pair do |option, value|
           iputs [option, value].join(' = ')
         end
