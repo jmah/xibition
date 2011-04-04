@@ -137,25 +137,33 @@ def describe_object(hier_def)
     end
     $needs_line = true
 
+    needs_group_line = false
     $connections_by_source_id[obj_id].each do |conn_def|
       next unless conn_def['type'] == 'IBCocoaActionConnection'
       iputs if $needs_line; $needs_line = false
       iputs "-[(#{conn_def['source-label']}) #{conn_def['label']}]"
-      $needs_line = true
+      needs_group_line = true
     end
+    $needs_line ||= needs_group_line; needs_group_line = false
+
     $connections_by_source_id[obj_id].each do |conn_def|
       next unless conn_def['type'] == 'IBCocoaTouchEventConnection'
       # Workaround: The event type has its key/value swapped in the ibtool output
       event_type = conn_def['event-type'] || conn_def.index('event-type')
       iputs if $needs_line; $needs_line = false
       iputs "#{event_type}: -[(#{conn_def['source-label']}) #{conn_def['label']}]"
-      $needs_line = true
+      needs_group_line = true
     end
+    $needs_line ||= needs_group_line; needs_group_line = false
+
     $connections_by_source_id[obj_id].each do |conn_def|
       next unless %w[IBCocoaOutletConnection IBCocoaTouchOutletConnection].include? conn_def['type']
       iputs if $needs_line; $needs_line = false
       iputs "#{conn_def['label']} = #{conn_def['destination-label']}"
+      needs_group_line = true
     end
+    $needs_line ||= needs_group_line; needs_group_line = false
+
     $connections_by_source_id[obj_id].each do |conn_def|
       next unless conn_def['type'] == 'IBBindingConnection'
       dest_id = conn_def['destination-id']
