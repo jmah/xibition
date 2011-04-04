@@ -1,0 +1,143 @@
+#!/usr/bin/ruby
+
+require 'rubygems'
+require 'escape'
+require 'plist'
+
+
+# Use the following in your git config:
+# [diff "xibition"]
+#   xfuncname = "^(@interface[ \t].*)$\n^[0-9 |-]*----\\+ (.+)$"
+#   textconv = /path/to/this/script
+
+
+filename = ARGV[0]
+content_xml = %x(#{Escape.shell_command ['ibtool', '--all', filename]})
+if content_xml.nil?
+  fail "Error parsing #{filename}: '#{error}'"
+end
+
+plist = Plist::parse_xml content_xml
+if not plist['com.apple.ibtool.errors'].nil?
+  plist['com.apple.ibtool.errors'].each do |error|
+    $stderr.puts "Error parsing #{filename}: '#{error['description']}'"
+  end
+  exit 1
+end
+
+
+#
+# Utilities
+#
+$block_indent = ['']
+def with_header(head, options={})
+  options = {:indent => '    ', :prestrip => false}.merge options
+  iputs head, options[:prestrip]
+  $block_indent.push($block_indent[-1] + options[:indent])
+  yield
+  $block_indent.pop
+end
+
+def iputs(str='', prestrip=false)
+  indent = $block_indent[-1]
+  indent = indent.rstrip if prestrip
+  puts((indent + str).rstrip)
+end
+
+class Hash
+  def each_sorted_pair(*args)
+    self.keys.sort.each {|key| yield key, self[key] }
+  end
+end
+
+
+#
+# Classes
+#
+classdefs = plist['com.apple.ibtool.document.classes']
+known_class_keys = ['class', 'superclass', 'outlets', 'actions']
+classdefs.each_sorted_pair do |classkey, classdef|
+  # TODO check keys in known_class_keys
+  with_header "@interface " + [classdef['class'], classdef['superclass']].compact.join(' : '), :indent => '' do
+    (classdef['outlets'] || {}).each_sorted_pair do |name, outletclass|
+      iputs ['@property', 'IBOutlet', outletclass, (outletclass == 'id' ? '' : '*') + name].join(' ') + ';'
+    end
+
+    (classdef['actions'] || {}).each_sorted_pair do |sel, id|
+      iputs "- (IBAction)#{sel}(#{id})sender;"
+    end
+  end
+  iputs '@end'
+  iputs
+end
+iputs
+
+
+#
+# Index objects and connections
+#
+$connections_by_source_id = Hash.new {|h,k| h[k] = [] }
+plist['com.apple.ibtool.document.connections'].each_pair do |conn_id, conn_def|
+  # The nib encodes the source of an action as the receiver; instead use the sender
+  source_id = (conn_def['type'] == 'IBCocoaActionConnection') ? conn_def['destination-id'] : conn_def['source-id']
+  $connections_by_source_id[source_id] << conn_def
+end
+
+$object_id_map = {}
+plist['com.apple.ibtool.document.objects'].each do |obj_id, obj_def|
+  i18n_def = plist['com.apple.ibtool.document.localizable-all'][obj_id] || {}
+  $object_id_map[obj_id.to_i] = obj_def.merge i18n_def
+end
+
+
+
+$needs_line = false
+def describe_object(hier_def)
+  obj_id = hier_def['object-id']
+  obj_def = $object_id_map[obj_id].merge hier_def
+
+  id_gutter = "#{obj_id.to_s.rjust(4)}| "
+
+  desc = "----+ "
+  custom_class = obj_def['custom-class']
+  desc << "(#{custom_class} *) " if custom_class and custom_class != 'FirstResponder'
+  desc << obj_def['label']
+
+  iputs if $needs_line; $needs_line = false
+  with_header desc, :indent => id_gutter, :prestrip => true do
+    if obj_def['frameOrigin']
+      iputs if $needs_line; $needs_line = false
+      iputs "{#{obj_def['frameOrigin']}, #{obj_def['frameSize']}}"
+      $needs_line = true
+    end
+
+    $connections_by_source_id[obj_id].each do |conn_def|
+      next unless conn_def['type'] == 'IBCocoaActionConnection'
+      iputs if $needs_line; $needs_line = false
+      iputs "-[(#{conn_def['source-label']}) #{conn_def['label']}]"
+      $needs_line = true
+    end
+    $connections_by_source_id[obj_id].each do |conn_def|
+      next unless conn_def['type'] == 'IBCocoaOutletConnection'
+      iputs if $needs_line; $needs_line = false
+      iputs "#{conn_def['label']} = #{conn_def['destination-label']}"
+    end
+    $connections_by_source_id[obj_id].each do |conn_def|
+      next unless conn_def['type'] == 'IBBindingConnection'
+      dest_id = conn_def['destination-id']
+      iputs if $needs_line; $needs_line = false
+      with_header "#{conn_def['binding']} ▶ (#{dest_id}| #{$object_id_map[dest_id]['ibExternalExplicitLabel']}).#{conn_def['keypath']}" do
+        conn_def['binding-options'].each_sorted_pair do |option, value|
+          iputs [option, value].join(' = ')
+        end
+      end
+      $needs_line = true
+    end
+
+    iputs; $needs_line = false
+    (hier_def['children'] || []).each {|child_hier_def| describe_object(child_hier_def) }
+  end
+  $needs_line = true
+end
+
+plist['com.apple.ibtool.document.hierarchy'].each {|hier_def| describe_object(hier_def) }
