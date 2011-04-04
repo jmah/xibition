@@ -35,7 +35,7 @@ $block_indent = ['']
 def with_header(head, options={})
   options = {:indent => '    ', :prestrip => false}.merge options
   iputs head, options[:prestrip]
-  $block_indent.push($block_indent[-1] + options[:indent])
+  $block_indent.push((options[:prestrip] ? $block_indent[-1].rstrip : $block_indent[-1]) + options[:indent])
   yield
   $block_indent.pop
 end
