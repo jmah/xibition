@@ -107,7 +107,9 @@ until hierarchy_def_stack.empty?
 end
 
 
-
+#
+# Print objects
+#
 $needs_line = false
 def describe_object(hier_def)
   obj_id = hier_def['object-id']
