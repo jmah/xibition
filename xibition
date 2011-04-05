@@ -28,6 +28,7 @@ end
 $block_indent = ['']
 def with_header(head, options={})
   options = {:indent => '    ', :prestrip => false}.merge options
+  iputs
   iputs head, options[:prestrip]
   $block_indent.push((options[:prestrip] ? $block_indent[-1].rstrip : $block_indent[-1]) + options[:indent])
   yield
@@ -48,6 +49,15 @@ end
 
 def display_label(obj_def)
   [obj_def['name'], obj_def['label']].compact.uniq.join(' - ')
+end
+
+def iputs_connections_of_type(obj_id, *types)
+  matching_connections = $connections_by_source_id[obj_id].select {|c| types.include? c['type'] }
+  lines = matching_connections.collect {|conn_def| yield conn_def }.compact
+  unless lines.empty?
+    iputs
+    lines.sort.each {|l| iputs l }
+  end
 end
 
 
@@ -80,9 +90,7 @@ classdefs.each_sorted_pair do |classkey, classdef|
     end
   end
   iputs '@end'
-  iputs
 end
-iputs
 
 
 #
@@ -114,7 +122,6 @@ end
 # Print objects
 #
 AttributesTreatedSeparately = Set.new %w[object-id custom-class name label ibShadowedToolTip frameOrigin frameSize children]
-$needs_line = false
 def describe_object(hier_def)
   obj_id = hier_def['object-id']
   obj_def = $object_id_map[obj_id]
@@ -125,7 +132,6 @@ def describe_object(hier_def)
   desc << "(#{custom_class} *) " if custom_class and custom_class != 'FirstResponder'
   desc << display_label(obj_def)
 
-  iputs if $needs_line; $needs_line = false
   with_header desc, :indent => "#{obj_id_str}| ", :prestrip => true do
     iputs "Attributes: #{attributes_sha1(obj_def)}"
 
@@ -135,50 +141,31 @@ def describe_object(hier_def)
     if obj_def['frameOrigin']
       iputs "{#{obj_def['frameOrigin']}, #{obj_def['frameSize']}}"
     end
-    $needs_line = true
 
-    needs_group_line = false
-    $connections_by_source_id[obj_id].each do |conn_def|
-      next unless conn_def['type'] == 'IBCocoaActionConnection'
-      iputs if $needs_line; $needs_line = false
-      iputs "-[(#{conn_def['source-label']}) #{conn_def['label']}]"
-      needs_group_line = true
+    iputs_connections_of_type(obj_id, 'IBCocoaActionConnection') do |conn_def|
+      "-[(#{conn_def['source-label']}) #{conn_def['label']}]"
     end
-    $needs_line ||= needs_group_line; needs_group_line = false
-
-    $connections_by_source_id[obj_id].each do |conn_def|
-      next unless conn_def['type'] == 'IBCocoaTouchEventConnection'
+    iputs_connections_of_type(obj_id, 'IBCocoaTouchEventConnection') do |conn_def|
       # Workaround: The event type has its key/value swapped in the ibtool output
       event_type = conn_def['event-type'] || conn_def.index('event-type')
-      iputs if $needs_line; $needs_line = false
-      iputs "#{event_type}: -[(#{conn_def['source-label']}) #{conn_def['label']}]"
-      needs_group_line = true
+      "#{event_type}: -[(#{conn_def['source-label']}) #{conn_def['label']}]"
     end
-    $needs_line ||= needs_group_line; needs_group_line = false
 
-    $connections_by_source_id[obj_id].each do |conn_def|
-      next unless %w[IBCocoaOutletConnection IBCocoaTouchOutletConnection].include? conn_def['type']
-      iputs if $needs_line; $needs_line = false
-      iputs "#{conn_def['label']} = #{conn_def['destination-label']}"
-      needs_group_line = true
+    iputs_connections_of_type(obj_id, 'IBCocoaOutletConnection', 'IBCocoaTouchOutletConnection') do |conn_def|
+      "#{conn_def['label']} = #{conn_def['destination-label']}"
     end
-    $needs_line ||= needs_group_line; needs_group_line = false
 
-    $connections_by_source_id[obj_id].each do |conn_def|
-      next unless conn_def['type'] == 'IBBindingConnection'
+    $connections_by_source_id[obj_id].select {|c| c['type'] == 'IBBindingConnection' }.sort_by {|c| c['binding'] }.each do |conn_def|
       dest_id = conn_def['destination-id']
-      iputs if $needs_line; $needs_line = false
       with_header "#{conn_def['binding']}: (#{dest_id}| #{display_label($object_id_map[dest_id])}).#{conn_def['keypath']}" do
         conn_def['binding-options'].each_sorted_pair do |option, value|
           iputs [option, value].join(' = ')
         end
       end
-      $needs_line = true
     end
 
     (hier_def['children'] || []).each {|child_hier_def| describe_object(child_hier_def) }
   end
-  $needs_line = true
 end
 
 def attributes_sha1(obj_def)
