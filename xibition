@@ -152,7 +152,8 @@ def describe_object(hier_def)
     end
 
     iputs_connections_of_type(obj_id, 'IBCocoaOutletConnection', 'IBCocoaTouchOutletConnection') do |conn_def|
-      "#{conn_def['label']} = #{conn_def['destination-label']}"
+      dest_id = conn_def['destination-id']
+      "#{conn_def['label']} = (#{dest_id}| #{display_label($object_id_map[dest_id])})"
     end
 
     $connections_by_source_id[obj_id].select {|c| c['type'] == 'IBBindingConnection' }.sort_by {|c| c['binding'] }.each do |conn_def|
