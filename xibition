@@ -74,22 +74,25 @@ SkipClassNames = [/^NS/, /^IK/, /^OSA/, /^QC/, /^UI/,
   'QTCaptureView', 'QTMovieView',
   'WebView']
 
-classdefs = plist['com.apple.ibtool.document.classes']
-known_class_keys = ['class', 'superclass', 'outlets', 'actions']
-classdefs.each_sorted_pair do |classkey, classdef|
-  next if SkipClassNames.any? {|pat| pat === classdef['class'] }
-  next if classdef['superclass'].nil?
+DISPLAY_CLASSES = false
+if DISPLAY_CLASSES
+  classdefs = plist['com.apple.ibtool.document.classes']
+  known_class_keys = ['class', 'superclass', 'outlets', 'actions']
+  classdefs.each_sorted_pair do |classkey, classdef|
+    next if SkipClassNames.any? {|pat| pat === classdef['class'] }
+    next if classdef['superclass'].nil?
 
-  with_header "@interface #{classdef['class']} : #{classdef['superclass']}", :indent => '' do
-    (classdef['outlets'] || {}).each_sorted_pair do |name, outletclass|
-      iputs ['@property', 'IBOutlet', outletclass, (outletclass == 'id' ? '' : '*') + name].join(' ') + ';'
-    end
+    with_header "@interface #{classdef['class']} : #{classdef['superclass']}", :indent => '' do
+      (classdef['outlets'] || {}).each_sorted_pair do |name, outletclass|
+        iputs ['@property', 'IBOutlet', outletclass, (outletclass == 'id' ? '' : '*') + name].join(' ') + ';'
+      end
 
-    (classdef['actions'] || {}).each_sorted_pair do |sel, id|
-      iputs "- (IBAction)#{sel}(#{id})sender;"
+      (classdef['actions'] || {}).each_sorted_pair do |sel, id|
+        iputs "- (IBAction)#{sel}(#{id})sender;"
+      end
     end
+    iputs '@end'
   end
-  iputs '@end'
 end
 
 
