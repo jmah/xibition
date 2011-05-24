@@ -5,6 +5,7 @@ require 'set'
 require 'digest/sha1'
 require 'escape'
 require 'plist'
+require 'stringio'
 
 
 filename = ARGV[0]
@@ -74,25 +75,35 @@ SkipClassNames = [/^NS/, /^IK/, /^OSA/, /^QC/, /^UI/,
   'QTCaptureView', 'QTMovieView',
   'WebView']
 
-DISPLAY_CLASSES = false
-if DISPLAY_CLASSES
-  classdefs = plist['com.apple.ibtool.document.classes']
-  known_class_keys = ['class', 'superclass', 'outlets', 'actions']
-  classdefs.each_sorted_pair do |classkey, classdef|
-    next if SkipClassNames.any? {|pat| pat === classdef['class'] }
-    next if classdef['superclass'].nil?
+DISPLAY_FULL_CLASSES = false
+unless DISPLAY_FULL_CLASSES
+  $stdout_save = $stdout.clone
+  $class_output = StringIO.new
+  $stdout = $class_output
+end
 
-    with_header "@interface #{classdef['class']} : #{classdef['superclass']}", :indent => '' do
-      (classdef['outlets'] || {}).each_sorted_pair do |name, outletclass|
-        iputs ['@property', 'IBOutlet', outletclass, (outletclass == 'id' ? '' : '*') + name].join(' ') + ';'
-      end
+classdefs = plist['com.apple.ibtool.document.classes']
+known_class_keys = ['class', 'superclass', 'outlets', 'actions']
+classdefs.each_sorted_pair do |classkey, classdef|
+  next if SkipClassNames.any? {|pat| pat === classdef['class'] }
+  next if classdef['superclass'].nil?
 
-      (classdef['actions'] || {}).each_sorted_pair do |sel, id|
-        iputs "- (IBAction)#{sel}(#{id})sender;"
-      end
+  with_header "@interface #{classdef['class']} : #{classdef['superclass']}", :indent => '' do
+    (classdef['outlets'] || {}).each_sorted_pair do |name, outletclass|
+      iputs ['@property', 'IBOutlet', outletclass, (outletclass == 'id' ? '' : '*') + name].join(' ') + ';'
     end
-    iputs '@end'
+
+    (classdef['actions'] || {}).each_sorted_pair do |sel, id|
+      iputs "- (IBAction)#{sel}(#{id})sender;"
+    end
   end
+  iputs '@end'
+end
+
+unless DISPLAY_FULL_CLASSES
+  $stdout = $stdout_save
+  puts 'Class definitions ' + Digest::SHA1.hexdigest($class_output.string)
+  $class_output = nil
 end
 
 
