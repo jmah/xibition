@@ -126,7 +126,7 @@ end
 hierarchy_def_stack = [] + plist['com.apple.ibtool.document.hierarchy']
 until hierarchy_def_stack.empty?
   hier_def = hierarchy_def_stack.pop
-  obj_def = $object_id_map[hier_def['object-id']]
+  obj_def = $object_id_map[hier_def['object-id']] || {}
   $object_id_map[hier_def['object-id']] = obj_def.merge(hier_def.merge({'children' => nil}))
   hierarchy_def_stack.concat(hier_def['children'] || [])
 end
