@@ -137,7 +137,7 @@ end
 #
 # Print objects
 #
-AttributesTreatedSeparately = Set.new %w[object-id custom-class name label ibShadowedToolTip frameOrigin frameSize children]
+AttributesTreatedSeparately = Set.new %w[object-id custom-class name label ibShadowedToolTip frameOrigin frameSize children ibExternalUserDefinedRuntimeAttributes]
 def describe_object(hier_def)
   obj_id = hier_def['object-id'].to_i
   obj_def = $object_id_map[obj_id]
@@ -156,6 +156,14 @@ def describe_object(hier_def)
     end
     if obj_def['frameOrigin']
       iputs "{#{obj_def['frameOrigin']}, #{obj_def['frameSize']}}"
+    end
+
+    if (runtime_attrs = obj_def['ibExternalUserDefinedRuntimeAttributes'])
+      iputs
+      runtime_attrs.each do |attr|
+        loc = (attr['localized'] == 'YES') ? ' (localized)' : ''
+        iputs "[self].#{attr['keyPath']} = #{attr['value'].inspect}" + loc
+      end
     end
 
     iputs_connections_of_type(obj_id, 'IBCocoaActionConnection') do |conn_def|
