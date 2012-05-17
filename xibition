@@ -11,7 +11,8 @@ require 'stringio'
 filename = ARGV[0]
 content_xml = %x(#{Escape.shell_command ['ibtool', '--all', filename]})
 if content_xml.nil?
-  fail "Error parsing #{filename}: '#{error}'"
+  puts "File #{Digest::SHA1.hexdigest(File.read(filename))} (no ibtool output)"
+  exit 1
 end
 
 plist = Plist::parse_xml content_xml
@@ -19,6 +20,7 @@ if not plist['com.apple.ibtool.errors'].nil?
   plist['com.apple.ibtool.errors'].each do |error|
     $stderr.puts "Error parsing #{filename}: '#{error['description']}'"
   end
+  puts "File #{Digest::SHA1.hexdigest(File.read(filename))} (ibtool gave errors)"
   exit 1
 end
 
