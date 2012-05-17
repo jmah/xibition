@@ -128,8 +128,8 @@ end
 hierarchy_def_stack = [] + plist['com.apple.ibtool.document.hierarchy']
 until hierarchy_def_stack.empty?
   hier_def = hierarchy_def_stack.pop
-  obj_def = $object_id_map[hier_def['object-id']] || {}
-  $object_id_map[hier_def['object-id']] = obj_def.merge(hier_def.merge({'children' => nil}))
+  obj_def = $object_id_map[hier_def['object-id'].to_i] || {}
+  $object_id_map[hier_def['object-id'].to_i] = obj_def.merge(hier_def.merge({'children' => nil}))
   hierarchy_def_stack.concat(hier_def['children'] || [])
 end
 
@@ -139,7 +139,7 @@ end
 #
 AttributesTreatedSeparately = Set.new %w[object-id custom-class name label ibShadowedToolTip frameOrigin frameSize children]
 def describe_object(hier_def)
-  obj_id = hier_def['object-id']
+  obj_id = hier_def['object-id'].to_i
   obj_def = $object_id_map[obj_id]
 
   obj_id_str = obj_id.to_s.rjust(4)
